@@ -63,6 +63,29 @@ public class SimpleGraphiteClient {
 	}
 	
 	/**
+	 * Send a set of metrics with a given timestamp to graphite.
+	 *  
+	 * @param metrics the metrics as key-value-pairs
+	 * @param timeStamp the timestamp
+	 */
+	public void sendMetricsPrecise(Map<String, Double> metrics, long timeStamp) {
+		try {
+			Socket socket = createSocket();
+			OutputStream s = socket.getOutputStream();
+			PrintWriter out = new PrintWriter(s, true);
+			for (Map.Entry<String, Double> metric: metrics.entrySet()) {
+				out.printf("%s %e %d%n", metric.getKey(), metric.getValue(), timeStamp);	
+			}			
+			out.close();
+			socket.close();
+		} catch (UnknownHostException e) {
+			throw new GraphiteException("Unknown host: " + graphiteHost);
+		} catch (IOException e) {
+			throw new GraphiteException("Error while writing data to graphite: " + e.getMessage(), e);
+		}
+	}
+	
+	/**
 	 * Send a single metric with the current time as timestamp to graphite. 
 	 * 
 	 * @param key The metric key
@@ -71,6 +94,10 @@ public class SimpleGraphiteClient {
 	 * @throws GraphiteException if writing to graphite fails
 	 */
 	public void sendMetric(String key, int value) {
+		sendMetric(key, value, getCurrentTimestamp());
+	}
+	
+	public void sendMetric(String key, double value) {
 		sendMetric(key, value, getCurrentTimestamp());
 	}
 	
@@ -86,6 +113,13 @@ public class SimpleGraphiteClient {
 	@SuppressWarnings("serial")
 	public void sendMetric(final String key, final int value, long timeStamp) {		
 		sendMetrics(new HashMap<String, Integer>() {{
+			put(key, value);
+		}}, timeStamp);
+	}
+	
+	@SuppressWarnings("serial")
+	public void sendMetric(final String key, final double value, long timeStamp) {		
+		sendMetricsPrecise(new HashMap<String, Double>() {{
 			put(key, value);
 		}}, timeStamp);
 	}
